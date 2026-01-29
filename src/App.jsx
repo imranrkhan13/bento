@@ -1,631 +1,1531 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Link2, Image, Type, Plus, Copy, Check, Trash2, Eye, GripVertical, ExternalLink, Upload, Maximize2, Edit3, Share2 } from 'lucide-react';
-
-function App() {
-  const [userId, setUserId] = useState('');
-  const [content, setContent] = useState([]);
-  const [newContent, setNewContent] = useState({ type: '', value: '', title: '', size: 'medium', preview: null });
-  const [shareableLink, setShareableLink] = useState('');
-  const [isAddingContent, setIsAddingContent] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const [viewMode, setViewMode] = useState('edit');
-  const [draggedItem, setDraggedItem] = useState(null);
-  const [imageMode, setImageMode] = useState('url');
-  const [editingItem, setEditingItem] = useState(null);
-  const [showSizeMenu, setShowSizeMenu] = useState(null);
-  const [loadingPreview, setLoadingPreview] = useState(false);
-  const fileInputRef = useRef(null);
-
-  useEffect(() => {
-    loadUserData();
-    const hash = window.location.hash.substring(1);
-    if (hash && hash.startsWith('view_')) {
-      setViewMode('shared');
-      loadSharedData(hash);
-    }
-  }, []);
-
-  const loadUserData = async () => {
-    try {
-      const result = await window.storage.get('userData');
-      if (result) {
-        const data = JSON.parse(result.value);
-        setUserId(data.userId);
-        setContent(data.content || []);
-        setShareableLink(data.shareableLink);
-      }
-    } catch (error) {
-      console.log('No existing data found');
+  import React, { useState, useEffect, useRef } from 'react';
+  import { motion, Reorder, AnimatePresence, useMotionValue, useSpring, useTransform } from 'framer-motion';
+  import {
+    Link2, Image as ImageIcon, Type, Trash2,
+    Maximize2, Upload, Share2, Plus, Check, GripVertical,
+    Palette, Youtube, Clock, Music, ArrowUpRight, Instagram, Film, Search, X,
+    Play, Pause, Volume2, BookOpen, BookMarked, Twitter
+  } from 'lucide-react';
+  // --- Theme Configurations (Elevated Palettes) ---
+  const themes = {
+    warmCream: {
+      name: 'Warm Cream',
+      bg: 'bg-[#FDFCFB]',
+      card: 'bg-white/80',
+      accent: 'text-[#5C4033]',
+      border: 'border-[#E8DFD8]',
+      button: 'bg-[#5C4033] text-white',
+      ring: 'ring-[#5C4033]/20',
+      glass: 'backdrop-blur-xl bg-white/40',
+      songGradient: 'from-amber-50 to-orange-50',
+      verseGradient: 'from-amber-50 to-orange-50'
+    },
+    softSage: {
+      name: 'Soft Sage',
+      bg: 'bg-[#F2F5F3]',
+      card: 'bg-white/80',
+      accent: 'text-[#3E4E42]',
+      border: 'border-[#DDE5DF]',
+      button: 'bg-[#3E4E42] text-white',
+      ring: 'ring-[#3E4E42]/20',
+      glass: 'backdrop-blur-xl bg-white/40',
+      songGradient: 'from-emerald-50 to-teal-50',
+      verseGradient: 'from-emerald-50 to-teal-50'
+    },
+    mistyBlue: {
+      name: 'Misty Blue',
+      bg: 'bg-[#F0F4F8]',
+      card: 'bg-white/80',
+      accent: 'text-[#334155]',
+      border: 'border-[#E2E8F0]',
+      button: 'bg-[#334155] text-white',
+      ring: 'ring-[#334155]/20',
+      glass: 'backdrop-blur-xl bg-white/40',
+      songGradient: 'from-blue-50 to-indigo-50',
+      verseGradient: 'from-blue-50 to-indigo-50'
+    },
+    masculineSteel: {
+      name: 'Masculine Steel',
+      bg: 'bg-[#1A1D23]',
+      card: 'bg-slate-800/90',
+      accent: 'text-[#60A5FA]',
+      border: 'border-slate-700',
+      button: 'bg-[#60A5FA] text-slate-900',
+      ring: 'ring-[#60A5FA]/30',
+      glass: 'backdrop-blur-xl bg-slate-900/40',
+      textColor: 'text-slate-100',
+      songGradient: 'from-slate-800/50 to-slate-900/50',
+      verseGradient: 'from-slate-800/50 to-slate-900/50'
+    },
+    urbanNight: {
+      name: 'Urban Night',
+      bg: 'bg-[#0F172A]',
+      card: 'bg-slate-800/80',
+      accent: 'text-[#38BDF8]',
+      border: 'border-slate-700/50',
+      button: 'bg-gradient-to-r from-[#38BDF8] to-[#0EA5E9] text-white',
+      ring: 'ring-[#38BDF8]/30',
+      glass: 'backdrop-blur-xl bg-slate-900/50',
+      textColor: 'text-slate-100',
+      songGradient: 'from-slate-800/50 to-slate-900/50',
+      verseGradient: 'from-slate-800/50 to-slate-900/50'
+    },
+    rosePetal: {
+      name: 'Rose Petal',
+      bg: 'bg-[#FFF5F7]',
+      card: 'bg-white/90',
+      accent: 'text-[#EC4899]',
+      border: 'border-[#FBCFE8]',
+      button: 'bg-gradient-to-r from-[#EC4899] to-[#F472B6] text-white',
+      ring: 'ring-[#EC4899]/20',
+      glass: 'backdrop-blur-xl bg-pink-50/40',
+      songGradient: 'from-pink-50 to-rose-50',
+      verseGradient: 'from-pink-50 to-rose-50'
+    },
+    lavenderDream: {
+      name: 'Lavender Dream',
+      bg: 'bg-[#FAF5FF]',
+      card: 'bg-white/85',
+      accent: 'text-[#A855F7]',
+      border: 'border-[#E9D5FF]',
+      button: 'bg-gradient-to-r from-[#A855F7] to-[#C084FC] text-white',
+      ring: 'ring-[#A855F7]/20',
+      glass: 'backdrop-blur-xl bg-purple-50/40',
+      songGradient: 'from-purple-50 to-violet-50',
+      verseGradient: 'from-purple-50 to-violet-50'
     }
   };
 
-  const loadSharedData = async (shareId) => {
-    try {
-      const result = await window.storage.get(shareId, true);
-      if (result) {
-        const data = JSON.parse(result.value);
-        setUserId(data.userId);
-        setContent(data.content || []);
+  // --- Movie Search Modal (FIXED - Using different API key) ---
+  const MovieSearchModal = ({ onClose, onSelect, theme }) => {
+    const [query, setQuery] = useState('');
+    const [results, setResults] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
+
+    const searchMovies = async (searchQuery) => {
+      if (!searchQuery.trim()) {
+        setResults([]);
+        return;
       }
-    } catch (error) {
-      console.log('Shared data not found');
-    }
-  };
+      setLoading(true);
+      setError('');
+      try {
+        // Try multiple API keys for better reliability
+        const apiKeys = import.meta.env.VITE_OMDB_API_KEYS.split(",");
+        let success = false;
 
-  const saveUserData = async (updatedContent) => {
-    const newUserId = userId || `user_${Date.now()}`;
-    const shareId = `view_${newUserId}`;
-    const newShareableLink = `${window.location.origin}${window.location.pathname}#${shareId}`;
+        for (const apiKey of apiKeys) {
+          try {
+            const response = await fetch(
+              `https://www.omdbapi.com/?apikey=${apiKey}&s=${encodeURIComponent(searchQuery)}&type=movie`
+            );
 
-    const userData = {
-      userId: newUserId,
-      content: updatedContent,
-      shareableLink: newShareableLink
+            const data = await response.json();
+
+            if (data.Response === "True" && data.Search) {
+              setResults(data.Search.slice(0, 12));
+              success = true;
+              break; // stop once one key works
+            }
+          } catch (err) {
+            // silently try next key
+            continue;
+          }
+        }
+        
+        if (!success) {
+          setError('Unable to search movies. Please try again.');
+          setResults([]);
+        }
+      } catch (error) {
+        console.error('Error searching movies:', error);
+        setError('Search failed. Please try again.');
+        setResults([]);
+      }
+      setLoading(false);
     };
 
-    try {
-      await window.storage.set('userData', JSON.stringify(userData));
-      await window.storage.set(shareId, JSON.stringify(userData), true);
-      setUserId(newUserId);
-      setShareableLink(newShareableLink);
-    } catch (error) {
-      console.error('Error saving data', error);
-    }
+    useEffect(() => {
+      const timer = setTimeout(() => {
+        searchMovies(query);
+      }, 500);
+      return () => clearTimeout(timer);
+    }, [query]);
+
+    return (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[200] flex items-center justify-center p-4"
+        onClick={onClose}
+      >
+        <motion.div
+          initial={{ scale: 0.9, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          exit={{ scale: 0.9, opacity: 0 }}
+          onClick={(e) => e.stopPropagation()}
+          className={`${theme.card} border ${theme.border} rounded-[40px] p-8 max-w-4xl w-full max-h-[80vh] overflow-hidden flex flex-col shadow-2xl ${theme.textColor || ''}`}
+        >
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-2xl font-black">Search Movies</h3>
+            <button onClick={onClose} className="p-2 hover:bg-slate-100/10 rounded-full transition-all">
+              <X size={20} />
+            </button>
+          </div>
+
+          <div className="relative mb-6">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search for a movie..."
+              className={`w-full pl-12 pr-4 py-4 border ${theme.border} rounded-3xl outline-none focus:ring-2 ${theme.ring} transition-all text-lg ${theme.textColor ? 'bg-slate-900/50 text-white placeholder:text-slate-400' : 'bg-white'}`}
+              autoFocus
+            />
+          </div>
+
+          <div className="overflow-y-auto flex-1">
+            {loading ? (
+              <div className="text-center py-12 text-slate-400">Searching...</div>
+            ) : error ? (
+              <div className="text-center py-12 text-red-400">{error}</div>
+            ) : results.length > 0 ? (
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                {results.map((movie) => (
+                  <button
+                    key={movie.imdbID}
+                    onClick={() => onSelect({
+                      title: movie.Title,
+                      poster: movie.Poster !== 'N/A' ? movie.Poster : null,
+                      year: movie.Year,
+                      imdbID: movie.imdbID
+                    })}
+                    className="group relative overflow-hidden rounded-2xl transition-all hover:scale-[1.02] active:scale-[0.98]"
+                  >
+                    {movie.Poster !== 'N/A' ? (
+                      <div className="relative aspect-[2/3] overflow-hidden rounded-2xl bg-slate-100">
+                        <img
+                          src={movie.Poster}
+                          alt={movie.Title}
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                        <div className="absolute bottom-0 left-0 right-0 p-4 translate-y-2 group-hover:translate-y-0 opacity-0 group-hover:opacity-100 transition-all">
+                          <div className="text-white font-bold text-sm leading-tight mb-1 line-clamp-2">{movie.Title}</div>
+                          <div className="text-xs text-white/80">{movie.Year}</div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="aspect-[2/3] bg-slate-200 rounded-2xl flex flex-col items-center justify-center p-4 text-center">
+                        <Film size={32} className="text-slate-400 mb-2" />
+                        <div className="font-bold text-sm line-clamp-3">{movie.Title}</div>
+                        <div className="text-xs text-slate-500 mt-1">{movie.Year}</div>
+                      </div>
+                    )}
+                  </button>
+                ))}
+              </div>
+            ) : query ? (
+              <div className="text-center py-12 text-slate-400">No movies found. Try a different search.</div>
+            ) : (
+              <div className="text-center py-12 text-slate-400">Start typing to search</div>
+            )}
+          </div>
+        </motion.div>
+      </motion.div>
+    );
   };
 
-  const fetchLinkPreview = async (url) => {
-    setLoadingPreview(true);
-    try {
-      const response = await fetch(`https://api.microlink.io/?url=${encodeURIComponent(url)}`);
-      const data = await response.json();
-      if (data.status === 'success') {
-        setLoadingPreview(false);
-        return {
-          title: data.data.title,
-          description: data.data.description,
-          image: data.data.image?.url,
-          logo: data.data.logo?.url
-        };
-      }
-    } catch (error) {
-      console.error('Preview fetch failed:', error);
-    }
-    setLoadingPreview(false);
-    return null;
-  };
+  // --- Song Search Modal ---
+  const SongSearchModal = ({ onClose, onSelect, theme }) => {
+    const [query, setQuery] = useState('');
+    const [results, setResults] = useState([]);
+    const [loading, setLoading] = useState(false);
 
-  const handleFileUpload = (e) => {
-    const file = e.target.files[0];
-    if (file && file.type.startsWith('image/')) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        if (editingItem) {
-          setEditingItem({ ...editingItem, value: reader.result });
+    const searchSongs = async (searchQuery) => {
+      if (!searchQuery.trim()) return;
+      setLoading(true);
+      try {
+        const response = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(searchQuery)}&entity=song&limit=20`);
+        const data = await response.json();
+        if (data.results) {
+          setResults(data.results);
         } else {
-          setNewContent({ ...newContent, value: reader.result });
+          setResults([]);
         }
+      } catch (error) {
+        console.error('Error searching songs:', error);
+      }
+      setLoading(false);
+    };
+
+    useEffect(() => {
+      const timer = setTimeout(() => {
+        if (query) searchSongs(query);
+      }, 500);
+      return () => clearTimeout(timer);
+    }, [query]);
+
+    return (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[200] flex items-center justify-center p-4"
+        onClick={onClose}
+      >
+        <motion.div
+          initial={{ scale: 0.9, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          exit={{ scale: 0.9, opacity: 0 }}
+          onClick={(e) => e.stopPropagation()}
+          className={`${theme.card} border ${theme.border} rounded-[40px] p-8 max-w-3xl w-full max-h-[80vh] overflow-hidden flex flex-col shadow-2xl ${theme.textColor || ''}`}
+        >
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-2xl font-black">Search Songs</h3>
+            <button onClick={onClose} className="p-2 hover:bg-slate-100/10 rounded-full transition-all">
+              <X size={20} />
+            </button>
+          </div>
+
+          <div className="relative mb-6">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search for a song..."
+              className={`w-full pl-12 pr-4 py-4 border ${theme.border} rounded-3xl outline-none focus:ring-2 ${theme.ring} transition-all text-lg ${theme.textColor ? 'bg-slate-900/50 text-white placeholder:text-slate-400' : 'bg-white'}`}
+              autoFocus
+            />
+          </div>
+
+          <div className="overflow-y-auto flex-1 space-y-3">
+            {loading ? (
+              <div className="text-center py-12 text-slate-400">Searching...</div>
+            ) : results.length > 0 ? (
+              results.map((song) => (
+                <button
+                  key={song.trackId}
+                  onClick={() => onSelect({
+                    title: song.trackName,
+                    artist: song.artistName,
+                    artwork: song.artworkUrl100.replace('100x100', '600x600'),
+                    preview: song.previewUrl,
+                    trackId: song.trackId,
+                    album: song.collectionName
+                  })}
+                  className="w-full flex items-center gap-4 p-4 hover:bg-slate-50/10 rounded-2xl transition-all text-left group"
+                >
+                  <div className="relative flex-shrink-0">
+                    <img src={song.artworkUrl100} alt={song.trackName} className="w-16 h-16 object-cover rounded-xl shadow-sm" />
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 rounded-xl transition-all flex items-center justify-center">
+                      <Play size={20} className="text-white opacity-0 group-hover:opacity-100 transition-opacity" fill="white" />
+                    </div>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-bold text-base truncate">{song.trackName}</div>
+                    <div className="text-sm text-slate-500 truncate">{song.artistName}</div>
+                    <div className="text-xs text-slate-400 truncate">{song.collectionName}</div>
+                  </div>
+                </button>
+              ))
+            ) : query ? (
+              <div className="text-center py-12 text-slate-400">No songs found</div>
+            ) : (
+              <div className="text-center py-12 text-slate-400">Start typing to search</div>
+            )}
+          </div>
+        </motion.div>
+      </motion.div>
+    );
+  };
+
+  // --- Bible/Quran Verse Search Modal (FIXED - No white screen) ---
+  const VerseSearchModal = ({ onClose, onSelect, theme }) => {
+    const [source, setSource] = useState('bible');
+    const [query, setQuery] = useState('');
+    const [results, setResults] = useState([]);
+    const [loading, setLoading] = useState(false);
+
+    const searchVerses = async (searchQuery) => {
+      if (!searchQuery.trim()) return;
+      setLoading(true);
+      try {
+        if (source === 'bible') {
+          const response = await fetch(`https://labs.bible.org/api/?passage=${encodeURIComponent(searchQuery)}&type=json`);
+          const data = await response.json();
+          if (data && data.length > 0) {
+            setResults(data.map(v => ({
+              text: v.text,
+              reference: `${v.bookname} ${v.chapter}:${v.verse}`,
+              source: 'Bible'
+            })));
+          } else {
+            setResults([]);
+          }
+        } else {
+          const response = await fetch(`https://api.alquran.cloud/v1/search/${encodeURIComponent(searchQuery)}/all/en`);
+          const data = await response.json();
+          if (data.data && data.data.matches) {
+            setResults(data.data.matches.slice(0, 10).map(v => ({
+              text: v.text,
+              reference: `Surah ${v.surah.number}:${v.numberInSurah} - ${v.surah.englishName}`,
+              source: 'Quran'
+            })));
+          } else {
+            setResults([]);
+          }
+        }
+      } catch (error) {
+        console.error('Error searching verses:', error);
+        setResults([]);
+      }
+      setLoading(false);
+    };
+
+    useEffect(() => {
+      const timer = setTimeout(() => {
+        if (query) searchVerses(query);
+      }, 500);
+      return () => clearTimeout(timer);
+    }, [query, source]);
+
+    return (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[200] flex items-center justify-center p-4"
+        onClick={onClose}
+      >
+        <motion.div
+          initial={{ scale: 0.9, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          exit={{ scale: 0.9, opacity: 0 }}
+          onClick={(e) => e.stopPropagation()}
+          className={`${theme.card} border ${theme.border} rounded-[40px] p-8 max-w-3xl w-full max-h-[80vh] overflow-hidden flex flex-col shadow-2xl ${theme.textColor || ''}`}
+        >
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-2xl font-black">Search Verses</h3>
+            <button onClick={onClose} className="p-2 hover:bg-slate-100/10 rounded-full transition-all">
+              <X size={20} />
+            </button>
+          </div>
+
+          <div className="flex gap-2 mb-4">
+            <button
+              onClick={() => setSource('bible')}
+              className={`flex-1 py-3 rounded-2xl font-bold text-sm transition-all ${source === 'bible' ? theme.button : theme.textColor ? 'bg-slate-700/50' : 'bg-slate-100'}`}
+            >
+              Bible
+            </button>
+            <button
+              onClick={() => setSource('quran')}
+              className={`flex-1 py-3 rounded-2xl font-bold text-sm transition-all ${source === 'quran' ? theme.button : theme.textColor ? 'bg-slate-700/50' : 'bg-slate-100'}`}
+            >
+              Quran
+            </button>
+          </div>
+
+          <div className="relative mb-6">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={source === 'bible' ? "e.g., John 3:16" : "e.g., peace, love"}
+              className={`w-full pl-12 pr-4 py-4 border ${theme.border} rounded-3xl outline-none focus:ring-2 ${theme.ring} transition-all text-lg ${theme.textColor ? 'bg-slate-900/50 text-white placeholder:text-slate-400' : 'bg-white'}`}
+              autoFocus
+            />
+          </div>
+
+          <div className="overflow-y-auto flex-1 space-y-3">
+            {loading ? (
+              <div className="text-center py-12 text-slate-400">Searching...</div>
+            ) : results.length > 0 ? (
+              results.map((verse, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => {
+                    onSelect(verse);
+                    onClose();
+                  }}
+                  className={`w-full p-6 rounded-3xl transition-all text-left group border ${theme.textColor ? 'border-slate-700 hover:border-slate-600 hover:bg-slate-700/30' : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50/50'}`}
+                >
+                  <div className="font-bold text-sm mb-2 opacity-60">{verse.reference}</div>
+                  <div className="text-base leading-relaxed italic">&ldquo;{verse.text}&rdquo;</div>
+                </button>
+              ))
+            ) : query ? (
+              <div className="text-center py-12 text-slate-400">No verses found</div>
+            ) : (
+              <div className="text-center py-12 text-slate-400">Start typing to search</div>
+            )}
+          </div>
+        </motion.div>
+      </motion.div>
+    );
+  };
+
+  // --- Goodreads Book Search Modal ---
+  const BookSearchModal = ({ onClose, onSelect, theme }) => {
+    const [query, setQuery] = useState('');
+    const [results, setResults] = useState([]);
+    const [loading, setLoading] = useState(false);
+
+    const searchBooks = async (searchQuery) => {
+      if (!searchQuery.trim()) return;
+      setLoading(true);
+      try {
+        const response = await fetch(`https://openlibrary.org/search.json?q=${encodeURIComponent(searchQuery)}&limit=20`);
+        const data = await response.json();
+        if (data.docs) {
+          setResults(data.docs.filter(book => book.cover_i).slice(0, 12).map(book => ({
+            title: book.title,
+            author: book.author_name?.[0] || 'Unknown Author',
+            cover: `https://covers.openlibrary.org/b/id/${book.cover_i}-L.jpg`,
+            key: book.key,
+            firstPublishYear: book.first_publish_year
+          })));
+        }
+      } catch (error) {
+        console.error('Error searching books:', error);
+      }
+      setLoading(false);
+    };
+
+    useEffect(() => {
+      const timer = setTimeout(() => {
+        if (query) searchBooks(query);
+      }, 500);
+      return () => clearTimeout(timer);
+    }, [query]);
+
+    return (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[200] flex items-center justify-center p-4"
+        onClick={onClose}
+      >
+        <motion.div
+          initial={{ scale: 0.9, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          exit={{ scale: 0.9, opacity: 0 }}
+          onClick={(e) => e.stopPropagation()}
+          className={`${theme.card} border ${theme.border} rounded-[40px] p-8 max-w-4xl w-full max-h-[80vh] overflow-hidden flex flex-col shadow-2xl ${theme.textColor || ''}`}
+        >
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-2xl font-black">Search Books</h3>
+            <button onClick={onClose} className="p-2 hover:bg-slate-100/10 rounded-full transition-all">
+              <X size={20} />
+            </button>
+          </div>
+
+          <div className="relative mb-6">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search for a book..."
+              className={`w-full pl-12 pr-4 py-4 border ${theme.border} rounded-3xl outline-none focus:ring-2 ${theme.ring} transition-all text-lg ${theme.textColor ? 'bg-slate-900/50 text-white placeholder:text-slate-400' : 'bg-white'}`}
+              autoFocus
+            />
+          </div>
+
+          <div className="overflow-y-auto flex-1">
+            {loading ? (
+              <div className="text-center py-12 text-slate-400">Searching...</div>
+            ) : results.length > 0 ? (
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                {results.map((book, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => onSelect(book)}
+                    className="group relative overflow-hidden rounded-2xl transition-all hover:scale-[1.02] active:scale-[0.98]"
+                  >
+                    <div className="relative aspect-[2/3] overflow-hidden rounded-2xl bg-slate-100">
+                      <img
+                        src={book.cover}
+                        alt={book.title}
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                      <div className="absolute bottom-0 left-0 right-0 p-4 translate-y-2 group-hover:translate-y-0 opacity-0 group-hover:opacity-100 transition-all">
+                        <div className="text-white font-bold text-sm leading-tight mb-1 line-clamp-2">{book.title}</div>
+                        <div className="text-xs text-white/80">{book.author}</div>
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            ) : query ? (
+              <div className="text-center py-12 text-slate-400">No books found</div>
+            ) : (
+              <div className="text-center py-12 text-slate-400">Start typing to search</div>
+            )}
+          </div>
+        </motion.div>
+      </motion.div>
+    );
+  };
+
+  // --- Interactive Tilt Component ---
+  const TiltCard = ({ children, className }) => {
+    const x = useMotionValue(0);
+    const y = useMotionValue(0);
+    const mouseXSpring = useSpring(x);
+    const mouseYSpring = useSpring(y);
+    const rotateX = useTransform(mouseYSpring, [-0.5, 0.5], ["7deg", "-7deg"]);
+    const rotateY = useTransform(mouseXSpring, [-0.5, 0.5], ["-7deg", "7deg"]);
+
+    const handleMouseMove = (e) => {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const width = rect.width;
+      const height = rect.height;
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+      const xPct = mouseX / width - 0.5;
+      const yPct = mouseY / height - 0.5;
+      x.set(xPct);
+      y.set(yPct);
+    };
+
+    const handleMouseLeave = () => {
+      x.set(0);
+      y.set(0);
+    };
+
+    return (
+      <motion.div
+        onMouseMove={handleMouseMove}
+        onMouseLeave={handleMouseLeave}
+        style={{ rotateX, rotateY, transformStyle: "preserve-3d" }}
+        className={className}
+      >
+        <div style={{ transform: "translateZ(20px)" }} className="h-full w-full">
+          {children}
+        </div>
+      </motion.div>
+    );
+  };
+
+  // --- FULLY RESPONSIVE Custom Audio Player ---
+  const CustomAudioPlayer = ({ src, theme, size = 'medium' }) => {
+    const audioRef = useRef(null);
+    const [isPlaying, setIsPlaying] = useState(false);
+    const [currentTime, setCurrentTime] = useState(0);
+    const [duration, setDuration] = useState(0);
+    const [volume, setVolume] = useState(1);
+
+    useEffect(() => {
+      const audio = audioRef.current;
+      if (!audio) return;
+
+      const updateTime = () => setCurrentTime(audio.currentTime);
+      const updateDuration = () => setDuration(audio.duration);
+      const handleEnded = () => setIsPlaying(false);
+
+      audio.addEventListener('timeupdate', updateTime);
+      audio.addEventListener('loadedmetadata', updateDuration);
+      audio.addEventListener('ended', handleEnded);
+
+      return () => {
+        audio.removeEventListener('timeupdate', updateTime);
+        audio.removeEventListener('loadedmetadata', updateDuration);
+        audio.removeEventListener('ended', handleEnded);
       };
-      reader.readAsDataURL(file);
-    }
-  };
+    }, []);
 
-  const handleAddContent = async () => {
-    if (!newContent.type || !newContent.value) return;
-
-    let contentToAdd = { ...newContent, id: Date.now() };
-
-    if (newContent.type === 'link') {
-      const preview = await fetchLinkPreview(newContent.value);
-      if (preview) {
-        contentToAdd.preview = preview;
+    const togglePlay = () => {
+      if (audioRef.current) {
+        if (isPlaying) {
+          audioRef.current.pause();
+        } else {
+          audioRef.current.play();
+        }
+        setIsPlaying(!isPlaying);
       }
-    }
+    };
 
-    const updatedContent = [...content, contentToAdd];
-    setContent(updatedContent);
-    saveUserData(updatedContent);
-    setNewContent({ type: '', value: '', title: '', size: 'medium', preview: null });
-    setIsAddingContent(false);
-    setImageMode('url');
-  };
+    const formatTime = (time) => {
+      if (isNaN(time)) return '0:00';
+      const mins = Math.floor(time / 60);
+      const secs = Math.floor(time % 60);
+      return `${mins}:${secs.toString().padStart(2, '0')}`;
+    };
 
-  const handleUpdateContent = async () => {
-    if (!editingItem || !editingItem.value) return;
-
-    let itemToUpdate = { ...editingItem };
-
-    if (editingItem.type === 'link' && editingItem.value !== content.find(i => i.id === editingItem.id)?.value) {
-      const preview = await fetchLinkPreview(editingItem.value);
-      if (preview) {
-        itemToUpdate.preview = preview;
+    const handleSeek = (e) => {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const percentage = x / rect.width;
+      const newTime = percentage * duration;
+      if (audioRef.current) {
+        audioRef.current.currentTime = newTime;
       }
-    }
+    };
 
-    const updatedContent = content.map(item =>
-      item.id === editingItem.id ? itemToUpdate : item
-    );
-    setContent(updatedContent);
-    saveUserData(updatedContent);
-    setEditingItem(null);
-    setImageMode('url');
-  };
+    const handleVolumeChange = (e) => {
+      const newVolume = parseFloat(e.target.value);
+      setVolume(newVolume);
+      if (audioRef.current) {
+        audioRef.current.volume = newVolume;
+      }
+    };
 
-  const handleDeleteContent = (id) => {
-    const updatedContent = content.filter(item => item.id !== id);
-    setContent(updatedContent);
-    saveUserData(updatedContent);
-  };
+    const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
 
-  const handleSizeChange = (id, newSize) => {
-    const updatedContent = content.map(item =>
-      item.id === id ? { ...item, size: newSize } : item
-    );
-    setContent(updatedContent);
-    saveUserData(updatedContent);
-    setShowSizeMenu(null);
-  };
-
-  const handleDragStart = (e, index) => {
-    e.dataTransfer.effectAllowed = 'move';
-    setDraggedItem(index);
-  };
-
-  const handleDragOver = (e, index) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-  };
-
-  const handleDrop = (e, dropIndex) => {
-    e.preventDefault();
-    if (draggedItem === null || draggedItem === dropIndex) return;
-
-    const updatedContent = [...content];
-    const draggedItemContent = updatedContent[draggedItem];
-    updatedContent.splice(draggedItem, 1);
-    updatedContent.splice(dropIndex, 0, draggedItemContent);
-
-    setContent(updatedContent);
-    saveUserData(updatedContent);
-    setDraggedItem(null);
-  };
-
-  const copyToClipboard = () => {
-    navigator.clipboard.writeText(shareableLink);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  const getGridClass = (size) => {
-    switch (size) {
-      case 'small': return 'md:col-span-1';
-      case 'medium': return 'md:col-span-1';
-      case 'large': return 'md:col-span-2';
-      case 'xlarge': return 'md:col-span-3';
-      default: return 'md:col-span-1';
-    }
-  };
-
-  const renderCard = (item, index, isShared = false) => (
-    <div
-      key={item.id}
-      draggable={!isShared}
-      onDragStart={(e) => !isShared && handleDragStart(e, index)}
-      onDragOver={(e) => !isShared && handleDragOver(e, index)}
-      onDrop={(e) => !isShared && handleDrop(e, index)}
-      className={`bg-gradient-to-br from-slate-800 to-slate-900 rounded-3xl overflow-hidden border border-slate-700/50 hover:border-slate-600/50 transition-all ${!isShared ? 'cursor-move' : ''} ${getGridClass(item.size)} ${draggedItem === index ? 'opacity-40 scale-95' : ''
-        } group relative`}
-      style={{ minHeight: '200px' }}
-    >
-      {!isShared && (
-        <div className="absolute top-3 left-3 right-3 z-20 flex items-center justify-between opacity-0 group-hover:opacity-100 transition-opacity">
+    if (size === 'tiny') {
+      return (
+        <div className="w-full">
+          <audio ref={audioRef} src={src} />
           <div className="flex items-center gap-2">
-            <div className="text-slate-400 hover:text-slate-200 transition-colors bg-black/60 backdrop-blur-md rounded-lg p-2 cursor-grab active:cursor-grabbing">
-              <GripVertical className="w-4 h-4" />
-            </div>
-            <div className="relative">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowSizeMenu(showSizeMenu === item.id ? null : item.id);
-                }}
-                className="text-slate-400 hover:text-slate-200 p-2 rounded-lg transition-colors bg-black/60 backdrop-blur-md"
+            <button
+              onClick={togglePlay}
+              className="w-7 h-7 rounded-full bg-slate-900 text-white flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-md flex-shrink-0"
+            >
+              {isPlaying ? (
+                <Pause size={10} fill="white" />
+              ) : (
+                <Play size={10} fill="white" className="ml-0.5" />
+              )}
+            </button>
+            <div className="flex-1">
+              <div
+                className="h-0.5 bg-slate-900/10 rounded-full cursor-pointer relative overflow-hidden"
+                onClick={handleSeek}
               >
-                <Maximize2 className="w-4 h-4" />
+                <div
+                  className="absolute left-0 top-0 h-full bg-slate-900 rounded-full transition-all"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    if (size === 'small') {
+      return (
+        <div className="w-full">
+          <audio ref={audioRef} src={src} />
+          <div className="space-y-2">
+            <div
+              className="h-1 bg-slate-900/10 rounded-full cursor-pointer relative overflow-hidden"
+              onClick={handleSeek}
+            >
+              <div
+                className="absolute left-0 top-0 h-full bg-slate-900 rounded-full transition-all"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={togglePlay}
+                className="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-md flex-shrink-0"
+              >
+                {isPlaying ? (
+                  <Pause size={12} fill="white" />
+                ) : (
+                  <Play size={12} fill="white" className="ml-0.5" />
+                )}
               </button>
-              {showSizeMenu === item.id && (
-                <div className="absolute left-0 top-12 bg-slate-800 rounded-xl p-2 border border-slate-700 shadow-2xl z-30">
-                  <div className="flex gap-1">
+              <div className="flex-1 flex items-center justify-between text-[10px] font-semibold text-slate-400 tabular-nums">
+                <span>{formatTime(currentTime)}</span>
+                <span>{formatTime(duration)}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="w-full space-y-3">
+        <audio ref={audioRef} src={src} />
+
+        <div
+          className="h-1.5 bg-slate-900/10 rounded-full cursor-pointer relative overflow-hidden group"
+          onClick={handleSeek}
+        >
+          <motion.div
+            className="absolute left-0 top-0 h-full bg-slate-900 rounded-full"
+            style={{ width: `${progress}%` }}
+            transition={{ duration: 0.1 }}
+          />
+          <motion.div
+            className="absolute top-1/2 -translate-y-1/2 w-3.5 h-3.5 bg-slate-900 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
+            style={{ left: `calc(${progress}% - 7px)` }}
+          />
+        </div>
+
+        <div className="flex items-center gap-3">
+          <button
+            onClick={togglePlay}
+            className="w-10 h-10 rounded-full bg-slate-900 text-white flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-md flex-shrink-0"
+          >
+            {isPlaying ? (
+              <Pause size={16} fill="white" />
+            ) : (
+              <Play size={16} fill="white" className="ml-0.5" />
+            )}
+          </button>
+
+          <div className="flex-1 flex items-center gap-2 min-w-0">
+            <span className="text-xs font-semibold tabular-nums text-slate-600 whitespace-nowrap">
+              {formatTime(currentTime)}
+            </span>
+            <div className="flex-1 h-px bg-slate-200 min-w-[20px]"></div>
+            <span className="text-xs font-semibold tabular-nums text-slate-400 whitespace-nowrap">
+              {formatTime(duration)}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <Volume2 size={14} className="text-slate-400" />
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.01"
+              value={volume}
+              onChange={handleVolumeChange}
+              className="w-12 h-1 bg-slate-200 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-2.5 [&::-webkit-slider-thumb]:h-2.5 [&::-webkit-slider-thumb]:bg-slate-900 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:cursor-pointer"
+            />
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // --- Live Clock Widget ---
+  const ClockWidget = ({ accent, theme }) => {
+    const [time, setTime] = useState(new Date());
+    useEffect(() => {
+      const timer = setInterval(() => setTime(new Date()), 1000);
+      return () => clearInterval(timer);
+    }, []);
+    return (
+      <div className={`flex flex-col items-center justify-center h-full w-full p-6 text-center overflow-hidden ${theme.textColor || ''}`}>
+        <Clock className={`mb-3 ${accent}`} size={24} />
+        <div className="text-4xl font-black tabular-nums tracking-tighter">
+          {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+        </div>
+        <div className="text-[10px] uppercase tracking-widest opacity-40 font-bold mt-2">Local Time</div>
+      </div>
+    );
+  };
+
+  // --- Enhanced Tweet Embed ---
+  const EnhancedTweetEmbed = ({ url, theme }) => {
+    return (
+      <div className={`w-full h-full p-6 ${theme.textColor ? 'bg-slate-900/50' : 'bg-slate-50/50'} rounded-3xl flex flex-col justify-center`}>
+        <div className="flex items-start gap-3 mb-4">
+          <div className="w-12 h-12 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0">
+            <Twitter size={20} className="text-white" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="font-bold text-sm">Twitter Post</div>
+            <div className="text-xs opacity-60">@username</div>
+          </div>
+        </div>
+        <div className="text-base leading-relaxed mb-4">
+          View this post on Twitter
+        </div>
+        <a 
+          href={url} 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className={`${theme.button} px-4 py-2 rounded-xl text-sm font-bold text-center hover:opacity-90 transition-all`}
+        >
+          Open Tweet
+        </a>
+      </div>
+    );
+  };
+
+  export default function IdentityApp() {
+    const [content, setContent] = useState([]);
+    const [profile, setProfile] = useState({
+      name: 'Your Name',
+      profession: 'Creative Technologist & Designer',
+      image: null,
+      position: { x: 40, y: 40 }
+    });
+    const [showProfile, setShowProfile] = useState(true);
+    const [viewMode, setViewMode] = useState('edit');
+    const [currentTheme, setCurrentTheme] = useState('warmCream');
+    const [copied, setCopied] = useState(false);
+    const [showMovieSearch, setShowMovieSearch] = useState(false);
+    const [showSongSearch, setShowSongSearch] = useState(false);
+    const [showVerseSearch, setShowVerseSearch] = useState(false);
+    const [showBookSearch, setShowBookSearch] = useState(false);
+    const [showAddMenu, setShowAddMenu] = useState(false);
+    const [activeCardId, setActiveCardId] = useState(null);
+    const fileInputRef = useRef(null);
+    const profileFileInputRef = useRef(null);
+    const t = themes[currentTheme];
+
+    const handleImageUpload = (e, cardId) => {
+      const file = e.target.files[0];
+      if (file && file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          updateCard(cardId, { imageData: reader.result });
+        };
+        reader.readAsDataURL(file);
+      }
+    };
+
+    const handleProfileImageUpload = (e) => {
+      const file = e.target.files[0];
+      if (file && file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setProfile(prev => ({ ...prev, image: reader.result }));
+        };
+        reader.readAsDataURL(file);
+      }
+    };
+
+    const triggerImageUpload = (cardId) => {
+      setActiveCardId(cardId);
+      fileInputRef.current?.click();
+    };
+
+    const addCard = (type) => {
+      const newCard = { id: Date.now().toString(), type, value: '', title: '', size: 'medium' };
+      setContent([...content, newCard]);
+      setShowAddMenu(false);
+
+      if (type === 'movie') {
+        setActiveCardId(newCard.id);
+        setShowMovieSearch(true);
+      } else if (type === 'song') {
+        setActiveCardId(newCard.id);
+        setShowSongSearch(true);
+      } else if (type === 'verse') {
+        setActiveCardId(newCard.id);
+        setShowVerseSearch(true);
+      } else if (type === 'book') {
+        setActiveCardId(newCard.id);
+        setShowBookSearch(true);
+      }
+    };
+
+    const updateCard = (id, up) => {
+      setContent(c => c.map(i => i.id === id ? { ...i, ...up } : i));
+    };
+
+    const deleteCard = (id) => setContent(c => c.filter(i => i.id !== id));
+
+    const handleMovieSelect = (movie) => {
+      if (activeCardId) {
+        updateCard(activeCardId, {
+          movieData: movie,
+          title: movie.title
+        });
+      }
+      setShowMovieSearch(false);
+      setActiveCardId(null);
+    };
+
+    const handleSongSelect = (song) => {
+      if (activeCardId) {
+        updateCard(activeCardId, {
+          songData: song,
+          title: song.title
+        });
+      }
+      setShowSongSearch(false);
+      setActiveCardId(null);
+    };
+
+    const handleVerseSelect = (verse) => {
+      if (activeCardId) {
+        updateCard(activeCardId, {
+          verseData: verse,
+          title: verse.reference
+        });
+      }
+      setShowVerseSearch(false);
+      setActiveCardId(null);
+    };
+
+    const handleBookSelect = (book) => {
+      if (activeCardId) {
+        updateCard(activeCardId, {
+          bookData: book,
+          title: book.title
+        });
+      }
+      setShowBookSearch(false);
+      setActiveCardId(null);
+    };
+
+    const openMovieSearch = (cardId) => {
+      setActiveCardId(cardId);
+      setShowMovieSearch(true);
+    };
+
+    const openSongSearch = (cardId) => {
+      setActiveCardId(cardId);
+      setShowSongSearch(true);
+    };
+
+    const openVerseSearch = (cardId) => {
+      setActiveCardId(cardId);
+      setShowVerseSearch(true);
+    };
+
+    const openBookSearch = (cardId) => {
+      setActiveCardId(cardId);
+      setShowBookSearch(true);
+    };
+
+    const getSpan = (size) => {
+      switch (size) {
+        case 'wide': return 'md:col-span-2 md:row-span-1';
+        case 'tall': return 'md:col-span-1 md:row-span-2';
+        case 'large': return 'md:col-span-2 md:row-span-2';
+        default: return 'md:col-span-1 md:row-span-1';
+      }
+    };
+
+    const getEmbedInfo = (url) => {
+      if (!url) return { type: 'none' };
+      if (url.includes('youtube.com/watch?v=')) return { type: 'youtube', id: url.split('v=')[1]?.split('&')[0] };
+      if (url.includes('youtu.be/')) return { type: 'youtube', id: url.split('/').pop() };
+      if (url.includes('twitter.com') || url.includes('x.com')) return { type: 'twitter' };
+      if (url.includes('instagram.com')) return { type: 'instagram' };
+      return { type: 'link' };
+    };
+
+    const getAudioPlayerSize = (cardSize) => {
+      if (cardSize === 'medium') return 'tiny';
+      if (cardSize === 'wide' || cardSize === 'tall') return 'small';
+      return 'medium';
+    };
+
+    return (
+      <div className={`min-h-screen ${t.bg} transition-all duration-1000 font-sans ${t.textColor || 'text-slate-900'} pb-32`}>
+
+        {/* Hidden file inputs */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          onChange={(e) => handleImageUpload(e, activeCardId)}
+          className="hidden"
+        />
+        <input
+          ref={profileFileInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleProfileImageUpload}
+          className="hidden"
+        />
+
+        {/* Floating Profile Picture (FIXED - Position persists in view mode) */}
+        {showProfile && (
+          <motion.div
+            drag={viewMode === 'edit'}
+            dragMomentum={false}
+            dragElastic={0}
+            style={{ x: profile.position.x, y: profile.position.y }}
+            className="fixed z-[90]"
+            onDragEnd={(e, info) => {
+              if (viewMode === 'edit') {
+                setProfile(prev => ({
+                  ...prev,
+                  position: { x: info.point.x, y: info.point.y }
+                }));
+              }
+            }}
+          >
+            <div className="relative group">
+              <div className={`${t.card} border-2 ${t.border} rounded-[32px] p-6 shadow-2xl backdrop-blur-xl flex items-center gap-4 ${viewMode === 'edit' ? 'cursor-move' : ''}`}>
+                <div className="relative">
+                  <div className="w-20 h-20 rounded-full bg-gradient-to-br from-slate-200 to-slate-100 overflow-hidden ring-4 ring-white/50 shadow-lg">
+                    {profile.image ? (
+                      <img src={profile.image} alt="Profile" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-slate-300">
+                        <ImageIcon size={32} />
+                      </div>
+                    )}
+                  </div>
+                  {viewMode === 'edit' && (
+                    <button
+                      onClick={() => profileFileInputRef.current?.click()}
+                      className="absolute -bottom-1 -right-1 w-7 h-7 bg-white rounded-full shadow-lg flex items-center justify-center hover:scale-110 transition-all border-2 border-slate-100"
+                    >
+                      <Upload size={12} />
+                    </button>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  {viewMode === 'edit' ? (
+                    <>
+                      <input
+                        value={profile.name}
+                        onChange={(e) => setProfile(prev => ({ ...prev, name: e.target.value }))}
+                        className={`bg-transparent text-xl font-black outline-none mb-1 w-full ${t.textColor || ''}`}
+                        placeholder="Your Name"
+                      />
+                      <input
+                        value={profile.profession}
+                        onChange={(e) => setProfile(prev => ({ ...prev, profession: e.target.value }))}
+                        className={`bg-transparent text-sm font-medium opacity-60 outline-none w-full ${t.textColor || ''}`}
+                        placeholder="Your profession"
+                      />
+                    </>
+                  ) : (
+                    <>
+                      <div className={`text-xl font-black mb-1 ${t.textColor || ''}`}>{profile.name}</div>
+                      <div className={`text-sm font-medium opacity-60 ${t.textColor || ''}`}>{profile.profession}</div>
+                    </>
+                  )}
+                </div>
+                {viewMode === 'edit' && (
+                  <button
+                    onClick={() => setShowProfile(false)}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity p-2 hover:bg-red-50 rounded-full text-red-500"
+                  >
+                    <X size={16} />
+                  </button>
+                )}
+              </div>
+              {viewMode === 'edit' && (
+                <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className={`${t.card} border ${t.border} px-3 py-1 rounded-full text-[10px] font-bold whitespace-nowrap shadow-lg`}>
+                    Drag to move
+                  </div>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+
+        {!showProfile && viewMode === 'edit' && (
+          <motion.button
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            onClick={() => setShowProfile(true)}
+            className={`fixed top-40 left-8 z-[90] ${t.button} p-4 rounded-full shadow-xl hover:scale-110 transition-all`}
+          >
+            <Plus size={20} />
+          </motion.button>
+        )}
+
+        {/* Dynamic Nav */}
+        <nav className="fixed top-8 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-3">
+          <div className={`p-1.5 ${t.glass} border ${t.border} rounded-[24px] flex gap-1 shadow-2xl shadow-black/5`}>
+            <button onClick={() => setViewMode('edit')} className={`px-6 py-2.5 rounded-[18px] text-[10px] font-black tracking-widest transition-all ${viewMode === 'edit' ? t.button : 'opacity-30 hover:opacity-60'}`}>BUILD</button>
+            <button onClick={() => setViewMode('preview')} className={`px-6 py-2.5 rounded-[18px] text-[10px] font-black tracking-widest transition-all ${viewMode === 'preview' ? t.button : 'opacity-30 hover:opacity-60'}`}>VIEW</button>
+          </div>
+          <button onClick={() => {
+            const keys = Object.keys(themes);
+            setCurrentTheme(keys[(keys.indexOf(currentTheme) + 1) % keys.length]);
+          }} className={`p-3.5 ${t.glass} border ${t.border} rounded-full hover:rotate-90 transition-all duration-500`}>
+            <Palette size={18} className={t.accent} />
+          </button>
+        </nav>
+
+        <main className="max-w-6xl mx-auto px-6 pt-36">
+          <Reorder.Group axis="y" values={content} onReorder={setContent} className="grid grid-cols-1 md:grid-cols-4 gap-6 auto-rows-[200px]">
+            <AnimatePresence mode="popLayout">
+              {content.map((item) => {
+                const info = getEmbedInfo(item.value);
+                const audioSize = getAudioPlayerSize(item.size);
+
+                return (
+                  <Reorder.Item key={item.id} value={item} layout initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} className={getSpan(item.size)}>
+                    <TiltCard className="h-full w-full">
+                      <div className={`${t.card} border ${t.border} rounded-[40px] h-full w-full overflow-hidden relative shadow-sm group hover:shadow-2xl hover:shadow-black/5 transition-all duration-500`}>
+
+                        {/* Contextual Toolbar */}
+                        {viewMode === 'edit' && (
+                          <div className="absolute top-5 left-5 right-5 flex justify-between z-50 opacity-0 group-hover:opacity-100 transition-all transform translate-y-[-10px] group-hover:translate-y-0">
+                            <div className={`p-2 ${t.textColor ? 'bg-slate-700/90' : 'bg-white/90'} backdrop-blur-md rounded-full border ${t.border} cursor-grab`}><GripVertical size={14} /></div>
+                            <div className="flex gap-2">
+                              {item.type === 'movie' && (
+                                <button onClick={() => openMovieSearch(item.id)} className={`p-2 ${t.textColor ? 'bg-slate-700/90 hover:bg-blue-500' : 'bg-white/90 hover:bg-black hover:text-white'} rounded-full border ${t.border} transition-all`}><Search size={14} /></button>
+                              )}
+                              {item.type === 'song' && (
+                                <button onClick={() => openSongSearch(item.id)} className={`p-2 ${t.textColor ? 'bg-slate-700/90 hover:bg-blue-500' : 'bg-white/90 hover:bg-black hover:text-white'} rounded-full border ${t.border} transition-all`}><Search size={14} /></button>
+                              )}
+                              {item.type === 'verse' && (
+                                <button onClick={() => openVerseSearch(item.id)} className={`p-2 ${t.textColor ? 'bg-slate-700/90 hover:bg-blue-500' : 'bg-white/90 hover:bg-black hover:text-white'} rounded-full border ${t.border} transition-all`}><Search size={14} /></button>
+                              )}
+                              {item.type === 'book' && (
+                                <button onClick={() => openBookSearch(item.id)} className={`p-2 ${t.textColor ? 'bg-slate-700/90 hover:bg-blue-500' : 'bg-white/90 hover:bg-black hover:text-white'} rounded-full border ${t.border} transition-all`}><Search size={14} /></button>
+                              )}
+                              {item.type === 'image' && (
+                                <button onClick={() => triggerImageUpload(item.id)} className={`p-2 ${t.textColor ? 'bg-slate-700/90 hover:bg-blue-500' : 'bg-white/90 hover:bg-black hover:text-white'} rounded-full border ${t.border} transition-all`}><Upload size={14} /></button>
+                              )}
+                              <button onClick={() => {
+                                const sz = ['medium', 'wide', 'tall', 'large'];
+                                updateCard(item.id, { size: sz[(sz.indexOf(item.size) + 1) % sz.length] });
+                              }} className={`p-2 ${t.textColor ? 'bg-slate-700/90 hover:bg-blue-500' : 'bg-white/90 hover:bg-black hover:text-white'} rounded-full border ${t.border} transition-all`}><Maximize2 size={14} /></button>
+                              <button onClick={() => deleteCard(item.id)} className="p-2 bg-red-50 rounded-full border border-red-100 text-red-500 hover:bg-red-500 hover:text-white transition-all"><Trash2 size={14} /></button>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Content Switcher */}
+                        <div className="h-full w-full">
+                          {item.type === 'movie' && item.movieData ? (
+                            <div className="h-full w-full relative overflow-hidden group/movie">
+                              {item.movieData.poster ? (
+                                <>
+                                  <img src={item.movieData.poster} alt={item.movieData.title} className="w-full h-full object-cover absolute inset-0" />
+                                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent p-6 pt-20">
+                                    <div className="text-white font-black text-xl leading-tight mb-1">{item.movieData.title}</div>
+                                    <div className="text-white/70 text-sm font-bold">{item.movieData.year}</div>
+                                  </div>
+                                </>
+                              ) : (
+                                <div className="w-full h-full bg-gradient-to-br from-slate-100 to-slate-200 flex flex-col items-center justify-center p-6 text-center">
+                                  <Film size={48} className="text-slate-400 mb-4" />
+                                  <div className="font-black text-lg leading-tight mb-1">{item.movieData.title}</div>
+                                  <div className="text-sm text-slate-600 font-bold">{item.movieData.year}</div>
+                                </div>
+                              )}
+                            </div>
+                          ) : item.type === 'song' && item.songData ? (
+                            <div className={`h-full w-full relative overflow-hidden bg-gradient-to-br ${t.songGradient}`}>
+                              <div className="absolute inset-0 scale-110 opacity-20">
+                                <img src={item.songData.artwork} alt={item.songData.title} className="w-full h-full object-cover blur-3xl" />
+                              </div>
+
+                              <div className="relative h-full flex flex-col p-5">
+                                {item.size === 'medium' ? (
+                                  <>
+                                    <div className="flex items-center gap-2 mb-2 flex-1 min-h-0">
+                                      <img
+                                        src={item.songData.artwork}
+                                        alt={item.songData.title}
+                                        className="w-12 h-12 rounded-lg shadow-lg ring-1 ring-black/5 flex-shrink-0"
+                                      />
+                                      <div className="flex-1 min-w-0">
+                                        <div className={`font-black text-xs leading-tight line-clamp-1 ${t.textColor || ''}`}>{item.songData.title}</div>
+                                        <div className={`text-[10px] font-semibold line-clamp-1 ${t.textColor ? 'text-slate-400' : 'text-slate-600'}`}>{item.songData.artist}</div>
+                                      </div>
+                                    </div>
+                                    {item.songData.preview && (
+                                      <div className={`backdrop-blur-xl ${t.textColor ? 'bg-slate-800/70' : 'bg-white/70'} rounded-xl p-2 shadow-lg ring-1 ring-black/5`}>
+                                        <CustomAudioPlayer src={item.songData.preview} theme={t} size="tiny" />
+                                      </div>
+                                    )}
+                                  </>
+                                ) : item.size === 'wide' || item.size === 'tall' ? (
+                                  <>
+                                    <div className="flex items-center gap-3 mb-3 flex-1 min-h-0">
+                                      <img
+                                        src={item.songData.artwork}
+                                        alt={item.songData.title}
+                                        className="w-16 h-16 rounded-xl shadow-lg ring-1 ring-black/5 flex-shrink-0"
+                                      />
+                                      <div className="flex-1 min-w-0">
+                                        <div className={`font-black text-sm leading-tight line-clamp-2 ${t.textColor || ''}`}>{item.songData.title}</div>
+                                        <div className={`text-xs font-semibold line-clamp-1 ${t.textColor ? 'text-slate-400' : 'text-slate-600'}`}>{item.songData.artist}</div>
+                                      </div>
+                                    </div>
+                                    {item.songData.preview && (
+                                      <div className={`backdrop-blur-xl ${t.textColor ? 'bg-slate-800/70' : 'bg-white/70'} rounded-2xl p-3 shadow-lg ring-1 ring-black/5`}>
+                                        <CustomAudioPlayer src={item.songData.preview} theme={t} size="small" />
+                                      </div>
+                                    )}
+                                  </>
+                                ) : (
+                                  <>
+                                    <div className="flex-1 flex flex-col justify-center items-center text-center mb-4">
+                                      <img
+                                        src={item.songData.artwork}
+                                        alt={item.songData.title}
+                                        className="w-32 h-32 rounded-3xl shadow-2xl ring-1 ring-black/5 mb-4"
+                                      />
+                                      <div className="space-y-1 max-w-full px-2">
+                                        <div className={`font-black text-lg leading-tight line-clamp-2 ${t.textColor || ''}`}>{item.songData.title}</div>
+                                        <div className={`text-sm font-semibold line-clamp-1 ${t.textColor ? 'text-slate-400' : 'text-slate-600'}`}>{item.songData.artist}</div>
+                                        {item.songData.album && (
+                                          <div className={`text-xs line-clamp-1 ${t.textColor ? 'text-slate-500' : 'text-slate-400'}`}>{item.songData.album}</div>
+                                        )}
+                                      </div>
+                                    </div>
+                                    {item.songData.preview && (
+                                      <div className={`backdrop-blur-xl ${t.textColor ? 'bg-slate-800/70' : 'bg-white/70'} rounded-3xl p-4 shadow-lg ring-1 ring-black/5`}>
+                                        <CustomAudioPlayer src={item.songData.preview} theme={t} size="medium" />
+                                      </div>
+                                    )}
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          ) : item.type === 'verse' && item.verseData ? (
+                            <div className={`h-full w-full p-8 flex flex-col justify-center bg-gradient-to-br ${t.verseGradient} relative overflow-hidden`}>
+                              <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-black/5 to-transparent rounded-full blur-3xl" />
+                              <div className="relative z-10">
+                                <div className="mb-6">
+                                  <BookOpen className={`${t.accent} mb-3`} size={28} />
+                                  <div className={`text-xs font-bold uppercase tracking-wider mb-1 ${t.textColor ? 'opacity-50' : 'opacity-60'}`}>{item.verseData.source}</div>
+                                  <div className={`text-sm font-black ${t.textColor ? 'opacity-70' : 'opacity-80'}`}>{item.verseData.reference}</div>
+                                </div>
+                                <div className={`text-lg leading-relaxed italic font-serif ${t.textColor || ''}`}>
+                                  &ldquo;{item.verseData.text}&rdquo;
+                                </div>
+                              </div>
+                            </div>
+                          ) : item.type === 'book' && item.bookData ? (
+                            <div className="h-full w-full relative overflow-hidden group/book">
+                              <img src={item.bookData.cover} alt={item.bookData.title} className="w-full h-full object-cover absolute inset-0" />
+                              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent p-6 pt-20">
+                                <div className="text-white font-black text-lg leading-tight mb-1 line-clamp-2">{item.bookData.title}</div>
+                                <div className="text-white/70 text-sm font-bold">{item.bookData.author}</div>
+                                {item.bookData.firstPublishYear && (
+                                  <div className="text-white/50 text-xs mt-1">{item.bookData.firstPublishYear}</div>
+                                )}
+                              </div>
+                              <a
+                                href={`https://openlibrary.org${item.bookData.key}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="absolute top-4 right-4 p-2 bg-white/90 rounded-full opacity-0 group-hover/book:opacity-100 transition-all hover:scale-110"
+                              >
+                                <ArrowUpRight size={16} />
+                              </a>
+                            </div>
+                          ) : item.type === 'link' && info.type === 'youtube' ? (
+                            <div className="w-full h-full relative rounded-[40px] overflow-hidden">
+                              <iframe className="w-full h-full" src={`https://www.youtube.com/embed/${info.id}?modestbranding=1`} frameBorder="0" allowFullScreen />
+                            </div>
+                          ) : item.type === 'link' && info.type === 'twitter' ? (
+                            <EnhancedTweetEmbed url={item.value} theme={t} />
+                          ) : item.type === 'link' && info.type === 'instagram' ? (
+                            <div className={`w-full h-full p-6 ${t.textColor ? 'bg-gradient-to-br from-pink-900/30 to-purple-900/30' : 'bg-gradient-to-br from-pink-50 to-purple-50'} rounded-3xl flex flex-col justify-center`}>
+                              <div className="flex items-start gap-3 mb-4">
+                                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+                                  <Instagram size={20} className="text-white" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="font-bold text-sm">Instagram Post</div>
+                                  <div className="text-xs opacity-60">View on Instagram</div>
+                                </div>
+                              </div>
+                              <a 
+                                href={item.value} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="bg-gradient-to-r from-pink-500 to-purple-600 text-white px-4 py-2 rounded-xl text-sm font-bold text-center hover:opacity-90 transition-all"
+                              >
+                                Open Post
+                              </a>
+                            </div>
+                          ) : item.type === 'text' ? (
+                            <div className="p-8 flex flex-col justify-center h-full w-full overflow-hidden">
+                              <div className={`w-8 h-1 bg-slate-200 mb-6 rounded-full`} />
+                              <textarea placeholder="Write a note..." value={item.value} onChange={e => updateCard(item.id, { value: e.target.value })} className={`bg-transparent w-full h-full resize-none outline-none text-lg font-bold leading-tight placeholder:opacity-10 ${t.textColor || ''}`} readOnly={viewMode === 'preview'} />
+                            </div>
+                          ) : item.type === 'image' && item.imageData ? (
+                            <div className="h-full w-full relative overflow-hidden">
+                              <img src={item.imageData} alt="Uploaded" className="w-full h-full object-cover absolute inset-0" />
+                              {viewMode === 'edit' && (
+                                <button
+                                  onClick={() => triggerImageUpload(item.id)}
+                                  className="absolute bottom-6 right-6 p-3 bg-white/90 backdrop-blur-md rounded-full border border-white shadow-lg hover:bg-black hover:text-white transition-all z-10"
+                                >
+                                  <Upload size={16} />
+                                </button>
+                              )}
+                            </div>
+                          ) : item.type === 'image' && viewMode === 'edit' ? (
+                            <div className="h-full w-full flex flex-col items-center justify-center p-8 text-center overflow-hidden">
+                              <div className={`w-20 h-20 rounded-full ${t.bg} flex items-center justify-center mb-4 border ${t.border} flex-shrink-0`}>
+                                <ImageIcon size={32} className="opacity-20" />
+                              </div>
+                              <div className="font-bold text-lg mb-2">No image uploaded</div>
+                              <button
+                                onClick={() => triggerImageUpload(item.id)}
+                                className={`${t.button} px-6 py-3 rounded-2xl text-sm font-bold mt-2`}
+                              >
+                                Upload Image
+                              </button>
+                            </div>
+                          ) : item.type === 'clock' ? (
+                            <ClockWidget accent={t.accent} theme={t} />
+                          ) : item.type === 'link' && item.value && viewMode === 'preview' ? (
+                            <a href={item.value} target="_blank" rel="noopener noreferrer" className={`p-8 h-full w-full flex flex-col justify-between ${t.textColor ? 'hover:bg-slate-700/50' : 'hover:bg-slate-50/50'} transition-all overflow-hidden group`}>
+                              <div className="flex justify-between items-start">
+                                <div className={`w-12 h-12 rounded-2xl ${t.bg} flex items-center justify-center border ${t.border} shadow-inner flex-shrink-0 group-hover:scale-110 transition-transform`}>
+                                  <Link2 className="opacity-30 group-hover:opacity-60 transition-opacity" size={20} />
+                                </div>
+                                <ArrowUpRight size={20} className="opacity-20 group-hover:opacity-100 transition-opacity flex-shrink-0 group-hover:translate-x-1 group-hover:-translate-y-1 transform duration-200" />
+                              </div>
+                              <div className="space-y-2 min-w-0">
+                                <div className="text-xl font-black leading-tight break-words group-hover:text-blue-500 transition-colors">{item.title || 'Untitled Link'}</div>
+                                <div className="text-xs font-bold opacity-40 truncate">{item.value}</div>
+                              </div>
+                            </a>
+                          ) : (item.type === 'movie' || item.type === 'song' || item.type === 'verse' || item.type === 'book') && viewMode === 'edit' ? (
+                            <div className="h-full w-full flex flex-col items-center justify-center p-8 text-center overflow-hidden">
+                              <div className={`w-20 h-20 rounded-full ${t.bg} flex items-center justify-center mb-4 border ${t.border} flex-shrink-0`}>
+                                {item.type === 'movie' ? <Film size={32} className="opacity-20" /> : 
+                                item.type === 'song' ? <Music size={32} className="opacity-20" /> :
+                                item.type === 'verse' ? <BookOpen size={32} className="opacity-20" /> :
+                                <BookMarked size={32} className="opacity-20" />}
+                              </div>
+                              <div className="font-bold text-lg mb-2">
+                                No {item.type === 'verse' ? 'verse' : item.type} selected
+                              </div>
+                              <button
+                                onClick={() => {
+                                  if (item.type === 'movie') openMovieSearch(item.id);
+                                  else if (item.type === 'song') openSongSearch(item.id);
+                                  else if (item.type === 'verse') openVerseSearch(item.id);
+                                  else if (item.type === 'book') openBookSearch(item.id);
+                                }}
+                                className={`${t.button} px-6 py-3 rounded-2xl text-sm font-bold mt-2`}
+                              >
+                                Search {item.type === 'verse' ? 'Verses' : item.type === 'book' ? 'Books' : item.type === 'movie' ? 'Movies' : 'Songs'}
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="p-8 h-full w-full flex flex-col justify-between overflow-hidden">
+                              <div className="flex justify-between items-start">
+                                <div className={`w-12 h-12 rounded-2xl ${t.bg} flex items-center justify-center border ${t.border} shadow-inner flex-shrink-0`}><Link2 className="opacity-20" size={20} /></div>
+                                <ArrowUpRight size={20} className="opacity-10 group-hover:opacity-40 transition-opacity flex-shrink-0" />
+                              </div>
+                              <div className="space-y-2 min-w-0">
+                                {viewMode === 'edit' && (
+                                  <input
+                                    placeholder="https://example.com"
+                                    value={item.value || ''}
+                                    onChange={e => updateCard(item.id, { value: e.target.value })}
+                                    className={`${t.textColor ? 'bg-slate-900/50 text-white placeholder:text-slate-500' : 'bg-slate-50'} border ${t.border} w-full text-xs font-medium px-3 py-2 rounded-xl outline-none focus:ring-2 ${t.ring} transition-all`}
+                                  />
+                                )}
+                                <input
+                                  placeholder="Link Title"
+                                  value={item.title || ''}
+                                  onChange={e => updateCard(item.id, { title: e.target.value })}
+                                  className={`bg-transparent w-full text-xl font-black outline-none placeholder:opacity-20 ${t.textColor || ''}`}
+                                  readOnly={viewMode === 'preview'}
+                                />
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </TiltCard>
+                  </Reorder.Item>
+                );
+              })}
+            </AnimatePresence>
+          </Reorder.Group>
+        </main>
+
+        {/* Add Menu (Plus Button with Popup) */}
+        {viewMode === 'edit' && (
+          <motion.div
+            initial={{ y: 100, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[100]"
+          >
+            <AnimatePresence>
+              {showAddMenu && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20, scale: 0.9 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 20, scale: 0.9 }}
+                  className={`absolute bottom-20 left-1/2 -translate-x-1/2 ${t.card} border ${t.border} rounded-3xl p-4 shadow-2xl backdrop-blur-xl min-w-[280px]`}
+                >
+                  <div className="grid grid-cols-3 gap-2">
                     {[
-                      { size: 'small', label: 'S' },
-                      { size: 'medium', label: 'M' },
-                      { size: 'large', label: 'L' },
-                      { size: 'xlarge', label: 'XL' }
-                    ].map(({ size, label }) => (
+                      { icon: <Link2 size={20} />, type: 'link', label: 'Link' },
+                      { icon: <Type size={20} />, type: 'text', label: 'Text' },
+                      { icon: <ImageIcon size={20} />, type: 'image', label: 'Image' },
+                      { icon: <Clock size={20} />, type: 'clock', label: 'Clock' },
+                      { icon: <Film size={20} />, type: 'movie', label: 'Movie' },
+                      { icon: <Music size={20} />, type: 'song', label: 'Song' },
+                      { icon: <BookOpen size={20} />, type: 'verse', label: 'Verse' },
+                      { icon: <BookMarked size={20} />, type: 'book', label: 'Book' }
+                    ].map(tool => (
                       <button
-                        key={size}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleSizeChange(item.id, size);
-                        }}
-                        className={`px-3 py-2 rounded-lg text-sm font-semibold transition-all ${item.size === size
-                          ? 'bg-emerald-600 text-white'
-                          : 'text-slate-300 hover:text-white hover:bg-slate-700'
-                          }`}
+                        key={tool.type}
+                        onClick={() => addCard(tool.type)}
+                        className={`flex flex-col items-center gap-2 p-4 ${t.textColor ? 'hover:bg-slate-700 text-slate-400 hover:text-slate-100' : 'hover:bg-slate-50 text-slate-600 hover:text-slate-900'} rounded-2xl transition-all active:scale-90`}
                       >
-                        {label}
+                        {tool.icon}
+                        <span className="text-[10px] font-bold">{tool.label}</span>
                       </button>
                     ))}
                   </div>
-                </div>
+                </motion.div>
               )}
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setEditingItem(item);
-                setImageMode('url');
-              }}
-              className="text-slate-400 hover:text-slate-200 hover:bg-black/60 p-2 rounded-lg transition-all backdrop-blur-md"
-            >
-              <Edit3 className="w-4 h-4" />
-            </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                handleDeleteContent(item.id);
-              }}
-              className="text-red-400 hover:text-red-300 hover:bg-black/60 p-2 rounded-lg transition-all backdrop-blur-md"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      )}
+            </AnimatePresence>
 
-      {item.type === 'link' && (
-        <a href={item.value} target="_blank" rel="noopener noreferrer" className="block h-full hover:bg-slate-700/20 transition-colors">
-          {item.preview ? (
-            <div className="h-full flex flex-col">
-              {item.preview.image && (
-                <div className="h-48 overflow-hidden">
-                  <img src={item.preview.image} alt={item.preview.title} className="w-full h-full object-cover" />
-                </div>
-              )}
-              <div className="p-6 flex-1 flex flex-col justify-between">
-                <div>
-                  <div className="flex items-center gap-3 mb-3">
-                    {item.preview.logo && (
-                      <img src={item.preview.logo} alt="" className="w-8 h-8 rounded-lg" />
-                    )}
-                    <h3 className="font-semibold text-white text-xl line-clamp-2">{item.title || item.preview.title}</h3>
-                  </div>
-                  {item.preview.description && (
-                    <p className="text-slate-400 text-sm line-clamp-3">{item.preview.description}</p>
-                  )}
-                </div>
-                <div className="flex items-center text-slate-500 group-hover:text-emerald-400 transition-colors mt-4">
-                  <ExternalLink className="w-4 h-4 mr-2" />
-                  <span className="text-sm truncate">{new URL(item.value).hostname}</span>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="h-full p-8 flex flex-col justify-center">
-              <h3 className="font-semibold text-white text-2xl mb-3">{item.title || 'Link'}</h3>
-              <p className="text-slate-400 break-all mb-4 text-sm">{item.value}</p>
-              <div className="flex items-center text-slate-500 group-hover:text-emerald-400 transition-colors">
-                <ExternalLink className="w-5 h-5" />
-              </div>
-            </div>
-          )}
-        </a>
-      )}
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setShowAddMenu(!showAddMenu)}
+                className={`${t.button} w-16 h-16 rounded-full flex items-center justify-center shadow-2xl hover:scale-110 active:scale-95 transition-all ${showAddMenu ? 'rotate-45' : ''}`}
+              >
+                <Plus size={28} />
+              </button>
 
-      {item.type === 'image' && (
-        <div className="h-full relative">
-          <img src={item.value} alt={item.title} className="w-full h-full object-cover" />
-          {item.title && (
-            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-6">
-              <h3 className="font-semibold text-white text-2xl">{item.title}</h3>
+              <button
+                onClick={() => { 
+                  navigator.clipboard.writeText(window.location.href); 
+                  setCopied(true); 
+                  setTimeout(() => setCopied(false), 2000); 
+                }}
+                className={`${t.button} px-8 py-4 rounded-full font-black text-xs tracking-[0.2em] flex items-center gap-2 hover:scale-105 active:scale-95 transition-all shadow-xl`}
+              >
+                {copied ? <Check size={16} /> : <Share2 size={16} />} 
+                {copied ? 'COPIED' : 'PUBLISH'}
+              </button>
             </div>
-          )}
-        </div>
-      )}
-
-      {item.type === 'text' && (
-        <div className="h-full p-8 flex flex-col justify-center">
-          {item.title && <h3 className="font-semibold text-white text-2xl mb-4">{item.title}</h3>}
-          <p className="text-slate-300 text-lg leading-relaxed">{item.value}</p>
-        </div>
-      )}
-    </div>
-  );
-
-  if (viewMode === 'shared' || viewMode === 'preview') {
-    return (
-      <div className="min-h-screen bg-slate-950" style={{ fontFamily: "'Poppins', sans-serif" }}>
-        {viewMode === 'preview' && (
-          <button
-            onClick={() => setViewMode('edit')}
-            className="fixed top-6 right-6 bg-slate-800 border border-slate-700 px-6 py-3 rounded-2xl text-sm font-medium text-white hover:bg-slate-700 hover:border-slate-600 transition-all z-50"
-          >
-            Back to Edit
-          </button>
+          </motion.div>
         )}
-        <div className="max-w-6xl mx-auto px-4 py-12">
-          <div className="mb-12 text-center">
-            <div className="w-32 h-32 bg-gradient-to-br from-emerald-600 to-teal-600 rounded-full mb-6 flex items-center justify-center text-white text-4xl font-bold shadow-2xl mx-auto">
-              {userId ? userId.charAt(5).toUpperCase() : 'U'}
-            </div>
-            <h1 className="text-5xl font-bold text-white mb-2">{userId || 'username'}</h1>
-            <p className="text-slate-400 text-lg">bento style links</p>
-          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {content.map((item, index) => renderCard(item, index, true))}
-          </div>
-
-          {content.length === 0 && (
-            <div className="text-center py-20 text-slate-500">
-              <p className="text-xl">No content available</p>
-            </div>
+        {/* Modals */}
+        <AnimatePresence>
+          {showMovieSearch && (
+            <MovieSearchModal
+              onClose={() => { setShowMovieSearch(false); setActiveCardId(null); }}
+              onSelect={handleMovieSelect}
+              theme={t}
+            />
           )}
-        </div>
+          {showSongSearch && (
+            <SongSearchModal
+              onClose={() => { setShowSongSearch(false); setActiveCardId(null); }}
+              onSelect={handleSongSelect}
+              theme={t}
+            />
+          )}
+          {showVerseSearch && (
+            <VerseSearchModal
+              onClose={() => { setShowVerseSearch(false); setActiveCardId(null); }}
+              onSelect={handleVerseSelect}
+              theme={t}
+            />
+          )}
+          {showBookSearch && (
+            <BookSearchModal
+              onClose={() => { setShowBookSearch(false); setActiveCardId(null); }}
+              onSelect={handleBookSelect}
+              theme={t}
+            />
+          )}
+        </AnimatePresence>
       </div>
     );
   }
-
-  return (
-    <div className="min-h-screen bg-slate-950" style={{ fontFamily: "'Poppins', sans-serif" }}>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
-        
-        @keyframes slideUp {
-          from { opacity: 0; transform: translateY(20px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-        
-        .animate-slide-up { animation: slideUp 0.3s ease-out; }
-        .animate-fade-in { animation: fadeIn 0.4s ease-out; }
-      `}</style>
-
-      <div className="max-w-6xl mx-auto px-4 py-12 animate-fade-in">
-        {/* <div className="mb-12">
-          <h1 className="text-6xl font-bold text-white mb-3">bento</h1>
-          <p className="text-slate-400 text-xl">your bento style website</p>
-        </div> */}
-
-        {shareableLink && (
-          <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-3xl p-6 mb-6 border border-slate-700/50 animate-slide-up">
-            <div className="flex items-center justify-between gap-4 flex-wrap">
-              <div className="flex-1 min-w-0">
-                <p className="text-sm text-slate-500 mb-2 font-medium flex items-center gap-2">
-                  <Share2 className="w-4 h-4" />
-                  Your shareable link
-                </p>
-                <p className="text-emerald-400 font-medium truncate text-sm bg-slate-900/50 px-4 py-2 rounded-xl border border-slate-700">
-                  {shareableLink}
-                </p>
-              </div>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setViewMode('preview')}
-                  className="px-5 py-3 bg-slate-800 hover:bg-slate-700 rounded-2xl transition-all flex items-center gap-2 text-white font-medium border border-slate-700"
-                >
-                  <Eye className="w-4 h-4" />
-                  Preview
-                </button>
-                <button
-                  onClick={copyToClipboard}
-                  className="px-5 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl transition-all flex items-center gap-2 font-medium shadow-lg shadow-emerald-500/20"
-                >
-                  {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                  {copied ? 'Copied!' : 'Copy Link'}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          {content.map((item, index) => renderCard(item, index, false))}
-        </div>
-
-        {!isAddingContent && !editingItem && (
-          <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 z-50">
-            <div className="bg-slate-800 border border-slate-700 rounded-2xl p-3 shadow-2xl flex items-center gap-2">
-              <button
-                onClick={() => {
-                  setIsAddingContent(true);
-                  setNewContent({ ...newContent, type: 'link' });
-                }}
-                className="p-4 rounded-xl bg-slate-700 hover:bg-emerald-600 transition-all group"
-                title="Add Link"
-              >
-                <Link2 className="w-6 h-6 text-slate-300 group-hover:text-white" />
-              </button>
-              <button
-                onClick={() => {
-                  setIsAddingContent(true);
-                  setNewContent({ ...newContent, type: 'image' });
-                }}
-                className="p-4 rounded-xl bg-slate-700 hover:bg-emerald-600 transition-all group"
-                title="Add Image"
-              >
-                <Image className="w-6 h-6 text-slate-300 group-hover:text-white" />
-              </button>
-              <button
-                onClick={() => {
-                  setIsAddingContent(true);
-                  setNewContent({ ...newContent, type: 'text' });
-                }}
-                className="p-4 rounded-xl bg-slate-700 hover:bg-emerald-600 transition-all group"
-                title="Add Text"
-              >
-                <Type className="w-6 h-6 text-slate-300 group-hover:text-white" />
-              </button>
-            </div>
-          </div>
-        )}
-
-        {(isAddingContent || editingItem) && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-3xl p-8 border border-slate-700/50 animate-slide-up max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-              <h3 className="text-2xl font-semibold text-white mb-6">{editingItem ? 'Edit Content' : 'Add New Content'}</h3>
-              <div className="space-y-5">
-                <div>
-                  <label className="block text-sm font-medium text-slate-400 mb-3">Card Size</label>
-                  <div className="flex gap-2">
-                    {[
-                      { size: 'small', label: 'S' },
-                      { size: 'medium', label: 'M' },
-                      { size: 'large', label: 'L' },
-                      { size: 'xlarge', label: 'XL' }
-                    ].map(({ size, label }) => (
-                      <button
-                        key={size}
-                        type="button"
-                        onClick={() => editingItem ? setEditingItem({ ...editingItem, size }) : setNewContent({ ...newContent, size })}
-                        className={`flex-1 p-3 rounded-xl border-2 transition-all text-sm font-bold ${(editingItem ? editingItem.size : newContent.size) === size
-                          ? 'border-emerald-500 bg-emerald-950/50 text-emerald-400'
-                          : 'border-slate-700 hover:border-slate-600 bg-slate-800/50 text-slate-400'
-                          }`}
-                      >
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-400 mb-3">Title (optional)</label>
-                  <input
-                    type="text"
-                    placeholder="Enter a title"
-                    value={editingItem ? editingItem.title : newContent.title}
-                    onChange={(e) => editingItem ? setEditingItem({ ...editingItem, title: e.target.value }) : setNewContent({ ...newContent, title: e.target.value })}
-                    className="w-full px-4 py-3 bg-slate-800 border-2 border-slate-700 rounded-2xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all text-white placeholder-slate-500"
-                  />
-                </div>
-
-                {(editingItem ? editingItem.type : newContent.type) === 'image' && (
-                  <div>
-                    <label className="block text-sm font-medium text-slate-400 mb-3">Image Source</label>
-                    <div className="flex gap-2 mb-3">
-                      <button
-                        type="button"
-                        onClick={() => setImageMode('url')}
-                        className={`flex-1 px-4 py-2 rounded-xl border-2 transition-all ${imageMode === 'url'
-                          ? 'border-emerald-500 bg-emerald-950/50 text-emerald-400'
-                          : 'border-slate-700 bg-slate-800/50 text-slate-400'
-                          }`}
-                      >
-                        URL
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setImageMode('upload');
-                          fileInputRef.current?.click();
-                        }}
-                        className={`flex-1 px-4 py-2 rounded-xl border-2 transition-all flex items-center justify-center gap-2 ${imageMode === 'upload'
-                          ? 'border-emerald-500 bg-emerald-950/50 text-emerald-400'
-                          : 'border-slate-700 bg-slate-800/50 text-slate-400'
-                          }`}
-                      >
-                        <Upload className="w-4 h-4" />
-                        Upload
-                      </button>
-                    </div>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/*"
-                      onChange={handleFileUpload}
-                      className="hidden"
-                    />
-                    {imageMode === 'url' && (
-                      <input
-                        type="text"
-                        placeholder="Enter image URL"
-                        value={editingItem ? editingItem.value : newContent.value}
-                        onChange={(e) => editingItem ? setEditingItem({ ...editingItem, value: e.target.value }) : setNewContent({ ...newContent, value: e.target.value })}
-                        className="w-full px-4 py-3 bg-slate-800 border-2 border-slate-700 rounded-2xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all text-white placeholder-slate-500"
-                      />
-                    )}
-                    {(editingItem ? editingItem.value : newContent.value) && (
-                      <img src={editingItem ? editingItem.value : newContent.value} alt="Preview" className="w-full max-w-xs rounded-xl mt-3" />
-                    )}
-                  </div>
-                )}
-
-                {(editingItem ? editingItem.type : newContent.type) !== 'image' && (
-                  <div>
-                    <label className="block text-sm font-medium text-slate-400 mb-3">
-                      {(editingItem ? editingItem.type : newContent.type) === 'link' ? 'URL' : 'Text Content'}
-                    </label>
-                    {(editingItem ? editingItem.type : newContent.type) === 'text' ? (
-                      <textarea
-                        placeholder="Enter your text"
-                        value={editingItem ? editingItem.value : newContent.value}
-                        onChange={(e) => editingItem ? setEditingItem({ ...editingItem, value: e.target.value }) : setNewContent({ ...newContent, value: e.target.value })}
-                        className="w-full px-4 py-3 bg-slate-800 border-2 border-slate-700 rounded-2xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all min-h-32 resize-none text-white placeholder-slate-500"
-                      />
-                    ) : (
-                      <input
-                        type="text"
-                        placeholder="Enter URL (e.g., https://bsky.app/profile/yourname)"
-                        value={editingItem ? editingItem.value : newContent.value}
-                        onChange={(e) => editingItem ? setEditingItem({ ...editingItem, value: e.target.value }) : setNewContent({ ...newContent, value: e.target.value })}
-                        className="w-full px-4 py-3 bg-slate-800 border-2 border-slate-700 rounded-2xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all text-white placeholder-slate-500"
-                      />
-                    )}
-                  </div>
-                )}
-
-                {loadingPreview && (
-                  <div className="text-center py-4">
-                    <div className="inline-block w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
-                    <p className="text-slate-400 text-sm mt-2">Loading preview...</p>
-                  </div>
-                )}
-
-                <div className="flex gap-3 pt-3">
-                  <button
-                    onClick={editingItem ? handleUpdateContent : handleAddContent}
-                    disabled={editingItem ? !editingItem.value : !newContent.value || loadingPreview}
-                    className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white py-3 rounded-2xl font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {editingItem ? 'Update Content' : 'Add Content'}
-                  </button>
-                  <button
-                    onClick={() => {
-                      setIsAddingContent(false);
-                      setEditingItem(null);
-                      setNewContent({ type: '', value: '', title: '', size: 'medium', preview: null });
-                      setImageMode('url');
-                    }}
-                    className="px-8 bg-slate-800 hover:bg-slate-700 text-slate-300 py-3 rounded-2xl font-medium transition-all border border-slate-700"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div> {content.length === 0 && !isAddingContent && (
-                <div className="text-center py-20 text-slate-600">
-                  <p className="text-xl">Click the + card to get started</p>
-                </div>
-              )}
-            </div>
-          </div>
-)}
-      </div>
-      </div>
-)}
-export default App;
